@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@cloudflare/kv-asset-handler": "^0.4.1",
+    "mammoth": "^1.11.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-dropzone": "^14.2.3"

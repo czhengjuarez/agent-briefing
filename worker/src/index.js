@@ -558,8 +558,60 @@ async function extractTextFromFile(arrayBuffer, mimeType, filename) {
     return decoder.decode(arrayBuffer);
   }
   
-  // For binary files, return indication
+  // Handle .docx files - extract text from XML
+  if (filename.endsWith('.docx') || mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+    try {
+      // .docx is a zip file containing XML
+      // We'll extract the main document.xml content
+      const text = await extractDocxText(arrayBuffer);
+      if (text && text.length > 0) {
+        return text;
+      }
+    } catch (err) {
+      console.error('DOCX extraction error:', err);
+    }
+  }
+  
+  // For other binary files, return indication
   return `Binary file: ${filename} (${(arrayBuffer.byteLength / 1024).toFixed(1)} KB)`;
+}
+
+/**
+ * Extract text from .docx file
+ * .docx files are ZIP archives containing XML files
+ */
+async function extractDocxText(arrayBuffer) {
+  try {
+    // Convert ArrayBuffer to Uint8Array for processing
+    const uint8Array = new Uint8Array(arrayBuffer);
+    
+    // Look for the document.xml file signature in the ZIP
+    // This is a simplified extraction - just get readable text
+    const decoder = new TextDecoder('utf-8', { fatal: false });
+    const fullText = decoder.decode(uint8Array);
+    
+    // Extract text between XML tags (simplified approach)
+    // Look for <w:t> tags which contain the actual text in Word documents
+    const textMatches = fullText.match(/<w:t[^>]*>([^<]+)<\/w:t>/g);
+    
+    if (textMatches && textMatches.length > 0) {
+      const extractedText = textMatches
+        .map(match => {
+          const textContent = match.replace(/<w:t[^>]*>/, '').replace(/<\/w:t>/, '');
+          return textContent;
+        })
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      
+      return extractedText;
+    }
+    
+    return null;
+  } catch (err) {
+    console.error('DOCX text extraction failed:', err);
+    return null;
+  }
 }
 
 /**
