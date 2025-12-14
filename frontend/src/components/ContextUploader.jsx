@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useTheme } from '../contexts/ThemeContext'
+import mammoth from 'mammoth'
 
 const ContextUploader = ({ files, onFilesChange, onFilesProcessed }) => {
   const { isDarkMode } = useTheme()
@@ -61,9 +62,30 @@ const ContextUploader = ({ files, onFilesChange, onFilesProcessed }) => {
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787'
     
     try {
+      // For .docx files, extract text client-side first using mammoth
+      let extractedText = null;
+      if (file.name.endsWith('.docx') || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const result = await mammoth.extractRawText({ arrayBuffer });
+          extractedText = result.value;
+          console.log('Extracted .docx text:', extractedText.substring(0, 200));
+        } catch (err) {
+          console.error('Mammoth extraction error:', err);
+        }
+      }
+      
+      // If we extracted text client-side, create a text file to upload
+      let fileToUpload = file;
+      if (extractedText) {
+        // Create a new text file with the extracted content
+        const textBlob = new Blob([extractedText], { type: 'text/plain' });
+        fileToUpload = new File([textBlob], file.name.replace('.docx', '.txt'), { type: 'text/plain' });
+      }
+      
       // Upload file to server for processing
       const formData = new FormData()
-      formData.append('file', file)
+      formData.append('file', fileToUpload)
       formData.append('summarize', 'true') // Request AI summarization
       
       const response = await fetch(`${API_URL}/api/files/upload`, {
@@ -79,12 +101,12 @@ const ContextUploader = ({ files, onFilesChange, onFilesProcessed }) => {
       
       return {
         id: data.file.id,
-        name: data.file.name,
-        type: data.file.type,
-        size: data.file.size,
+        name: file.name, // Keep original .docx name
+        type: file.type,
+        size: file.size,
         r2Key: data.file.r2Key,
-        preview: data.file.preview || data.file.summary || `File: ${data.file.name}`,
-        summary: data.file.summary,
+        preview: data.file.preview || data.file.summary || extractedText || `File: ${data.file.name}`,
+        summary: data.file.summary || extractedText,
         uploadedAt: new Date().toISOString()
       }
     } catch (error) {
