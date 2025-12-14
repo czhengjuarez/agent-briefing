@@ -406,11 +406,184 @@ Return ONLY the refined objective text, nothing else.`;
 }
 
 /**
- * Handle file upload and management
+ * Handle file operations (upload, download, delete)
  */
 async function handleFiles(request, env, path, method, corsHeaders) {
-  // TODO: Implement file handlers
-  return new Response(JSON.stringify({ message: 'Files endpoint - coming soon' }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-  });
+  const r2 = env.BRIEFING_FILES;
+  const db = env.DB;
+  
+  try {
+    // POST /api/files/upload - Upload file to R2 and optionally summarize
+    if (path === '/api/files/upload' && method === 'POST') {
+      const formData = await request.formData();
+      const file = formData.get('file');
+      const briefingId = formData.get('briefingId');
+      const summarize = formData.get('summarize') === 'true';
+      
+      if (!file) {
+        return new Response(JSON.stringify({ error: 'No file provided' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      
+      // Generate unique file key
+      const fileId = `file-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const r2Key = `${briefingId || 'temp'}/${fileId}`;
+      
+      // Upload to R2
+      await r2.put(r2Key, file.stream(), {
+        httpMetadata: {
+          contentType: file.type,
+        },
+        customMetadata: {
+          originalName: file.name,
+          uploadedAt: new Date().toISOString()
+        }
+      });
+      
+      // Extract text content for summarization
+      let preview = `File: ${file.name}`;
+      let summary = null;
+      
+      if (summarize) {
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const text = await extractTextFromFile(arrayBuffer, file.type, file.name);
+          
+          if (text && text.length > 100) {
+            // Use AI to summarize
+            summary = await summarizeWithAI(env.AI, text, file.name);
+            preview = summary.substring(0, 500);
+          } else {
+            preview = text || `Binary file: ${file.name}`;
+          }
+        } catch (err) {
+          console.error('Summarization error:', err);
+          preview = `File uploaded: ${file.name}`;
+        }
+      }
+      
+      return new Response(JSON.stringify({
+        success: true,
+        file: {
+          id: fileId,
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          r2Key: r2Key,
+          preview: preview,
+          summary: summary
+        }
+      }), {
+        status: 201,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // GET /api/files/:id - Download file from R2
+    if (path.match(/^\/api\/files\/[^/]+$/) && method === 'GET') {
+      const fileId = path.split('/').pop();
+      
+      // Get file metadata from DB
+      const fileRecord = await db.prepare(
+        'SELECT * FROM files WHERE id = ?'
+      ).bind(fileId).first();
+      
+      if (!fileRecord) {
+        return new Response(JSON.stringify({ error: 'File not found' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      
+      // Get file from R2
+      const object = await r2.get(fileRecord.r2_key);
+      
+      if (!object) {
+        return new Response(JSON.stringify({ error: 'File not found in storage' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      
+      return new Response(object.body, {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': object.httpMetadata.contentType,
+          'Content-Disposition': `attachment; filename="${fileRecord.filename}"`
+        }
+      });
+    }
+    
+    return new Response(JSON.stringify({ error: 'Not Found' }), {
+      status: 404,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+    
+  } catch (error) {
+    console.error('File handler error:', error);
+    return new Response(JSON.stringify({ 
+      error: 'File operation failed', 
+      message: error.message 
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+/**
+ * Extract text from various file types
+ */
+async function extractTextFromFile(arrayBuffer, mimeType, filename) {
+  const decoder = new TextDecoder('utf-8');
+  
+  // Handle text files
+  if (mimeType.startsWith('text/') || 
+      filename.endsWith('.txt') || 
+      filename.endsWith('.md') ||
+      filename.endsWith('.json') ||
+      filename.endsWith('.js') ||
+      filename.endsWith('.py') ||
+      filename.endsWith('.java')) {
+    return decoder.decode(arrayBuffer);
+  }
+  
+  // For binary files, return indication
+  return `Binary file: ${filename} (${(arrayBuffer.byteLength / 1024).toFixed(1)} KB)`;
+}
+
+/**
+ * Summarize text content using Cloudflare AI
+ */
+async function summarizeWithAI(ai, text, filename) {
+  try {
+    // Truncate text if too long (AI has token limits)
+    const maxChars = 10000;
+    const truncatedText = text.length > maxChars 
+      ? text.substring(0, maxChars) + '...' 
+      : text;
+    
+    const prompt = `Summarize the following document content in 2-3 sentences. Focus on the main topics and key information.
+
+Document: ${filename}
+
+Content:
+${truncatedText}
+
+Summary:`;
+    
+    const response = await ai.run('@cf/meta/llama-3.1-8b-instruct', {
+      messages: [
+        { role: 'user', content: prompt }
+      ],
+      max_tokens: 200
+    });
+    
+    return response.response || text.substring(0, 500);
+  } catch (error) {
+    console.error('AI summarization error:', error);
+    return text.substring(0, 500);
+  }
 }

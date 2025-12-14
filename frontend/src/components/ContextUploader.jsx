@@ -58,49 +58,47 @@ const ContextUploader = ({ files, onFilesChange, onFilesProcessed }) => {
   }
   
   const processFile = async (file) => {
-    return new Promise((resolve) => {
-      const reader = new FileReader()
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787'
+    
+    try {
+      // Upload file to server for processing
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('summarize', 'true') // Request AI summarization
       
-      reader.onload = (e) => {
-        const content = e.target.result
-        
-        // For text files, extract content directly
-        if (file.type.startsWith('text/') || file.name.endsWith('.txt') || file.name.endsWith('.md')) {
-          resolve({
-            id: `file-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            name: file.name,
-            type: file.type,
-            size: file.size,
-            content: content,
-            preview: content.substring(0, 200) + (content.length > 200 ? '...' : ''),
-            uploadedAt: new Date().toISOString()
-          })
-        } else {
-          // For binary files (PDF, DOC), store as base64
-          resolve({
-            id: `file-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            name: file.name,
-            type: file.type,
-            size: file.size,
-            content: content,
-            preview: `Binary file: ${file.name}`,
-            uploadedAt: new Date().toISOString()
-          })
-        }
+      const response = await fetch(`${API_URL}/api/files/upload`, {
+        method: 'POST',
+        body: formData
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to upload file')
       }
       
-      reader.onerror = () => {
-        resolve(null)
-      }
+      const data = await response.json()
       
-      // Read as text for text files, base64 for binary
-      if (file.type.startsWith('text/') || file.name.endsWith('.txt') || file.name.endsWith('.md') || 
-          file.name.endsWith('.json') || file.name.endsWith('.js') || file.name.endsWith('.py')) {
-        reader.readAsText(file)
-      } else {
-        reader.readAsDataURL(file)
+      return {
+        id: data.file.id,
+        name: data.file.name,
+        type: data.file.type,
+        size: data.file.size,
+        r2Key: data.file.r2Key,
+        preview: data.file.preview || data.file.summary || `File: ${data.file.name}`,
+        summary: data.file.summary,
+        uploadedAt: new Date().toISOString()
       }
-    })
+    } catch (error) {
+      console.error('File upload error:', error)
+      // Fallback to client-side processing
+      return {
+        id: `file-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        preview: `File: ${file.name} (upload failed, saved locally)`,
+        uploadedAt: new Date().toISOString()
+      }
+    }
   }
   
   const handleFiles = async (fileList) => {
