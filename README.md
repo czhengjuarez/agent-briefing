@@ -29,15 +29,34 @@
 
 ## 🎯 The Problem
 
+### The Leadership Layer for AI
+
+Reading [Jason Cyr's blog post](https://jasoncyr.com/leadership-layer-ai-agents) about experimenting with AI agents to manage his personal knowledge system made me realize: **everyone should understand this shift.**
+
+Here's what most leaders haven't recognized yet: **Every designer working with AI is now doing management work.** They're just not calling it that, and nothing in their education or career development prepared them for it.
+
+### From Prompting to Orchestration
+
+In the past, I focused on **how to prompt**, how to **vibe code**. These were isolated acts. **Managing agents is orchestration**—coordinating how multiple agents work together, which depends heavily on context. As human managers, we accumulate context throughout the year. But AI agents aren't mind readers. When orchestrating agents, **context becomes everything**.
+
+Jason's experience caught my attention:
+- When an agent **misfiled something**, he didn't debug code; he **clarified his intent**
+- When it **missed cross-links**, he didn't tweak parameters; he **provided more context** about how concepts relate
+- When it **extracted the wrong action items**, he didn't adjust thresholds; he **taught it about his priorities**
+
+This maps to a talk I gave two years ago at DesignOps Summit: when we stop treating AI as "tools" and start treating AI as "intelligence," **training, teaching, and coaching become the norm**.
+
+### The Delegation Gap
+
 When delegating tasks to AI agents, humans often provide **vague, incomplete instructions** that lead to:
 
 - ❌ **Ambiguous objectives**: "Write a blog" → What audience? What tone? What outcome?
 - ❌ **Missing context**: Agents lack critical background information and organizational history
 - ❌ **Unclear boundaries**: No guidance on what the agent should/shouldn't do
 - ❌ **No escalation path**: Agents don't know when to ask for help
-- ❌ **Undefined success**: No clear criteria for what "done" looks like
+- ❌ **Undefined success**: No measurable criteria for completion
 
-**Result:** Wasted time, poor outputs, and frustration on both sides.
+**Result**: Wasted time, frustration, and suboptimal outcomes on both sides.
 
 ---
 
