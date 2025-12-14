@@ -585,26 +585,57 @@ async function extractDocxText(arrayBuffer) {
     // Convert ArrayBuffer to Uint8Array for processing
     const uint8Array = new Uint8Array(arrayBuffer);
     
-    // Look for the document.xml file signature in the ZIP
-    // This is a simplified extraction - just get readable text
+    // Decode with error handling for binary data
     const decoder = new TextDecoder('utf-8', { fatal: false });
     const fullText = decoder.decode(uint8Array);
     
-    // Extract text between XML tags (simplified approach)
-    // Look for <w:t> tags which contain the actual text in Word documents
-    const textMatches = fullText.match(/<w:t[^>]*>([^<]+)<\/w:t>/g);
+    // Multiple patterns to try for text extraction
+    const patterns = [
+      /<w:t[^>]*>([^<]+)<\/w:t>/g,           // Standard Word text tags
+      /<w:t[^>]*>([\s\S]*?)<\/w:t>/g,        // Word text with any content
+      /<text[^>]*>([^<]+)<\/text>/g,         // Generic text tags
+      />([A-Za-z0-9\s.,!?;:'"()-]+)</g       // Any readable text between tags
+    ];
     
-    if (textMatches && textMatches.length > 0) {
-      const extractedText = textMatches
-        .map(match => {
-          const textContent = match.replace(/<w:t[^>]*>/, '').replace(/<\/w:t>/, '');
-          return textContent;
-        })
+    let extractedTexts = [];
+    
+    for (const pattern of patterns) {
+      const matches = fullText.match(pattern);
+      if (matches && matches.length > 0) {
+        const texts = matches.map(match => {
+          // Remove XML tags and get content
+          return match
+            .replace(/<[^>]+>/g, '')  // Remove all XML tags
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&amp;/g, '&')
+            .replace(/&quot;/g, '"')
+            .trim();
+        }).filter(text => text.length > 0 && /[a-zA-Z]/.test(text)); // Must contain letters
+        
+        if (texts.length > 0) {
+          extractedTexts = texts;
+          break; // Use first successful pattern
+        }
+      }
+    }
+    
+    if (extractedTexts.length > 0) {
+      return extractedTexts
         .join(' ')
         .replace(/\s+/g, ' ')
         .trim();
-      
-      return extractedText;
+    }
+    
+    // If no patterns worked, try to find any readable text
+    const readableText = fullText
+      .replace(/[^\x20-\x7E\n]/g, ' ') // Keep only printable ASCII
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    // If we found substantial readable text, return it
+    if (readableText.length > 100) {
+      return readableText.substring(0, 5000); // Limit to first 5000 chars
     }
     
     return null;
