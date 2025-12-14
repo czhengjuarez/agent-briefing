@@ -1,4 +1,4 @@
-# Agent Briefing Tool
+# Agent Briefing Canvas
 
 > **AI-powered delegation framework that transforms vague instructions into clear, actionable agent briefings.**
 
@@ -62,7 +62,7 @@ When delegating tasks to AI agents, humans often provide **vague, incomplete ins
 
 ## 💡 The Solution
 
-**Agent Briefing Tool** builds on Jason Cyr's original agent briefing concept with two key innovations:
+**Agent Briefing Canvas** builds on Jason Cyr's original agent briefing concept with two key innovations:
 
 ### 1. Smart "Objective" Composer (Goal Refiner)
 

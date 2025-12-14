@@ -31,7 +31,7 @@ const AgentBriefing = () => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                Agent Briefing Tool
+                Agent Briefing Canvas
               </h1>
               <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                 Define your delegation clearly
