@@ -101,10 +101,21 @@ This solves the fundamental problem: **AI agents aren't mind readers**. By provi
 - **Structured 6-Field Template**
   - ✅ **Objective** (AI-enhanced with smart refinement)
   - ✅ **Context** (with file upload support)
-  - ✅ **Boundaries** (what agent can/cannot do)
+  - ✅ **Boundaries** (what agent can/cannot do) - **NEW: Preset toggles**
   - ✅ **Escalation** (when to ask for help)
   - ✅ **Stakeholders** (who needs to know)
   - ✅ **Success Criteria** (measurable outcomes)
+
+### 🚧 Boundary Presets
+- **Smart Boundary Toggles** - Users often forget what not to do. Quick-add common constraints:
+  - 🚫 "No external web browsing"
+  - 📝 "Strict professional tone"
+  - ✅ "Do not invent facts (No hallucinations)"
+  - 🔒 "Do not access sensitive data"
+  - 💰 "Do not make financial commitments"
+  - 👤 "Do not impersonate humans"
+  - 🔗 "Do not share external links without verification"
+  - ⏰ "Complete within [X] timeframe"
 
 ### 🤖 AI-Powered Features
 - **Smart Objective Composer** (Cloudflare AI - Llama 3.1)

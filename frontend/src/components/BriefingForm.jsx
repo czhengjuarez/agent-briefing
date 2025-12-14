@@ -242,11 +242,52 @@ const BriefingForm = ({ initialData, onCancel, onSave }) => {
           <p className={`text-xs mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} italic`}>
             What the agent can cannot do
           </p>
+          
+          {/* Boundary Presets */}
+          <div className={`mb-3 p-3 rounded-lg ${isDarkMode ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
+            <p className={`text-xs font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+              Quick Add Common Boundaries:
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { icon: '🚫', text: 'No external web browsing' },
+                { icon: '📝', text: 'Strict professional tone' },
+                { icon: '✅', text: 'Do not invent facts (No hallucinations)' },
+                { icon: '🔒', text: 'Do not access sensitive data' },
+                { icon: '💰', text: 'Do not make financial commitments' },
+                { icon: '👤', text: 'Do not impersonate humans' },
+                { icon: '🔗', text: 'Do not share external links without verification' },
+                { icon: '⏰', text: 'Complete within specified timeframe' }
+              ].map((preset, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => {
+                    const currentBoundaries = formData.boundaries.trim();
+                    const newBoundary = `- ${preset.text}`;
+                    const updatedBoundaries = currentBoundaries 
+                      ? `${currentBoundaries}\n${newBoundary}`
+                      : newBoundary;
+                    handleChange('boundaries', updatedBoundaries);
+                  }}
+                  className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+                    isDarkMode
+                      ? 'bg-gray-600 hover:bg-gray-500 text-gray-200'
+                      : 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-300'
+                  }`}
+                >
+                  <span className="mr-1">{preset.icon}</span>
+                  {preset.text}
+                </button>
+              ))}
+            </div>
+          </div>
+          
           <textarea
             value={formData.boundaries}
             onChange={(e) => handleChange('boundaries', e.target.value)}
             placeholder="Define clear boundaries and limitations..."
-            rows={3}
+            rows={5}
             className={`w-full px-4 py-3 rounded-lg border ${
               errors.boundaries
                 ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
