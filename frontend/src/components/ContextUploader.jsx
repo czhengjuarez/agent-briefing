@@ -3,8 +3,8 @@ import { useTheme } from '../contexts/ThemeContext'
 import mammoth from 'mammoth'
 import * as pdfjsLib from 'pdfjs-dist'
 
-// Configure PDF.js worker - use unpkg for reliability
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`
+// Configure PDF.js worker - use local bundled worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
 
 const ContextUploader = ({ files, onFilesChange, onFilesProcessed }) => {
   const { isDarkMode } = useTheme()
