@@ -71,10 +71,177 @@ export default {
  * Handle briefing CRUD operations
  */
 async function handleBriefings(request, env, path, method, corsHeaders) {
-  // TODO: Implement briefing handlers
-  return new Response(JSON.stringify({ message: 'Briefings endpoint - coming soon' }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-  });
+  const db = env.DB;
+  
+  try {
+    // GET /api/briefings - List all briefings
+    if (path === '/api/briefings' && method === 'GET') {
+      const { results } = await db.prepare(
+        'SELECT * FROM briefings ORDER BY created_at DESC'
+      ).all();
+      
+      return new Response(JSON.stringify({ briefings: results }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // GET /api/briefings/:id - Get single briefing
+    if (path.match(/^\/api\/briefings\/[^/]+$/) && method === 'GET') {
+      const id = path.split('/').pop();
+      
+      const briefing = await db.prepare(
+        'SELECT * FROM briefings WHERE id = ?'
+      ).bind(id).first();
+      
+      if (!briefing) {
+        return new Response(JSON.stringify({ error: 'Briefing not found' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      
+      // Get associated files
+      const { results: files } = await db.prepare(
+        'SELECT * FROM files WHERE briefing_id = ?'
+      ).bind(id).all();
+      
+      return new Response(JSON.stringify({ 
+        briefing: { ...briefing, contextFiles: files }
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // POST /api/briefings - Create briefing
+    if (path === '/api/briefings' && method === 'POST') {
+      const data = await request.json();
+      const { 
+        id, title, objective, context, boundaries, 
+        escalation, stakeholders, successCriteria, contextFiles 
+      } = data;
+      
+      // Validate required fields
+      if (!title || !objective || !context || !boundaries || !escalation || !successCriteria) {
+        return new Response(JSON.stringify({ 
+          error: 'Missing required fields' 
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      
+      const briefingId = id || `briefing-${Date.now()}`;
+      const now = new Date().toISOString();
+      
+      // Insert briefing
+      await db.prepare(`
+        INSERT INTO briefings (
+          id, user_id, title, objective, context, boundaries, 
+          escalation, stakeholders, success_criteria, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        briefingId, 'anonymous', title, objective, context, boundaries,
+        escalation, stakeholders || null, successCriteria, now, now
+      ).run();
+      
+      // Insert files if any
+      if (contextFiles && contextFiles.length > 0) {
+        for (const file of contextFiles) {
+          await db.prepare(`
+            INSERT INTO files (
+              id, briefing_id, filename, file_type, file_size, 
+              r2_key, preview, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          `).bind(
+            file.id, briefingId, file.name, file.type, file.size,
+            file.id, file.preview, now
+          ).run();
+        }
+      }
+      
+      return new Response(JSON.stringify({ 
+        success: true, 
+        id: briefingId 
+      }), {
+        status: 201,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // PUT /api/briefings/:id - Update briefing
+    if (path.match(/^\/api\/briefings\/[^/]+$/) && method === 'PUT') {
+      const id = path.split('/').pop();
+      const data = await request.json();
+      const { 
+        title, objective, context, boundaries, 
+        escalation, stakeholders, successCriteria, contextFiles 
+      } = data;
+      
+      const now = new Date().toISOString();
+      
+      // Update briefing
+      await db.prepare(`
+        UPDATE briefings 
+        SET title = ?, objective = ?, context = ?, boundaries = ?,
+            escalation = ?, stakeholders = ?, success_criteria = ?, updated_at = ?
+        WHERE id = ?
+      `).bind(
+        title, objective, context, boundaries,
+        escalation, stakeholders || null, successCriteria, now, id
+      ).run();
+      
+      // Delete old files and insert new ones
+      await db.prepare('DELETE FROM files WHERE briefing_id = ?').bind(id).run();
+      
+      if (contextFiles && contextFiles.length > 0) {
+        for (const file of contextFiles) {
+          await db.prepare(`
+            INSERT INTO files (
+              id, briefing_id, filename, file_type, file_size, 
+              r2_key, preview, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          `).bind(
+            file.id, id, file.name, file.type, file.size,
+            file.id, file.preview, now
+          ).run();
+        }
+      }
+      
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // DELETE /api/briefings/:id - Delete briefing
+    if (path.match(/^\/api\/briefings\/[^/]+$/) && method === 'DELETE') {
+      const id = path.split('/').pop();
+      
+      // Delete files first (cascade should handle this, but being explicit)
+      await db.prepare('DELETE FROM files WHERE briefing_id = ?').bind(id).run();
+      
+      // Delete briefing
+      await db.prepare('DELETE FROM briefings WHERE id = ?').bind(id).run();
+      
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
+    return new Response(JSON.stringify({ error: 'Not Found' }), {
+      status: 404,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+    
+  } catch (error) {
+    console.error('Briefing handler error:', error);
+    return new Response(JSON.stringify({ 
+      error: 'Database error', 
+      message: error.message 
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
 }
 
 /**

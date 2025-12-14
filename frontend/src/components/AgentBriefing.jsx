@@ -1,35 +1,27 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useTheme } from '../contexts/ThemeContext'
+import { useBriefings } from '../hooks/useBriefings'
 import BriefingForm from './BriefingForm'
 import BriefingList from './BriefingList'
 import BriefingDetailsModal from './BriefingDetailsModal'
 
 const AgentBriefing = () => {
   const { isDarkMode, toggleDarkMode } = useTheme()
-  const [view, setView] = useState('welcome') // 'welcome', 'list', 'form'
-  const [briefings, setBriefings] = useState([])
+  const [currentView, setCurrentView] = useState('welcome') // 'welcome', 'list', 'form'
   const [editingBriefing, setEditingBriefing] = useState(null)
   const [viewingBriefing, setViewingBriefing] = useState(null)
   const [deletingBriefing, setDeletingBriefing] = useState(null)
   
-  // Load briefings from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem('briefings')
-    if (saved) {
-      try {
-        setBriefings(JSON.parse(saved))
-      } catch (e) {
-        console.error('Failed to load briefings:', e)
-      }
-    }
-  }, [])
-  
-  // Save briefings to localStorage
-  useEffect(() => {
-    if (briefings.length > 0) {
-      localStorage.setItem('briefings', JSON.stringify(briefings))
-    }
-  }, [briefings])
+  // Use API hook instead of localStorage
+  const { 
+    briefings, 
+    loading, 
+    error,
+    createBriefing, 
+    updateBriefing, 
+    deleteBriefing: deleteBriefingAPI,
+    refreshBriefings 
+  } = useBriefings()
 
   return (
     <div className={`min-h-screen ${isDarkMode ? 'dark bg-dark-bg' : 'bg-gray-50'}`}>
@@ -72,7 +64,7 @@ const AgentBriefing = () => {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {view === 'welcome' && briefings.length === 0 ? (
+        {currentView === 'welcome' && briefings.length === 0 ? (
           <div className="text-center py-16">
             <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full ${
               isDarkMode ? 'bg-gray-800' : 'bg-gray-100'
@@ -90,7 +82,7 @@ const AgentBriefing = () => {
             </p>
             
             <button
-              onClick={() => setView('form')}
+              onClick={() => setCurrentView('form')}
               className="bg-primary hover:bg-opacity-90 text-white font-semibold px-8 py-3 rounded-lg transition-all shadow-lg hover:shadow-xl"
             >
               Create New Briefing
@@ -140,16 +132,16 @@ const AgentBriefing = () => {
               </div>
             </div>
           </div>
-        ) : view === 'list' || (view === 'welcome' && briefings.length > 0) ? (
+        ) : currentView === 'list' || (currentView === 'welcome' && briefings.length > 0) ? (
           <BriefingList
             briefings={briefings}
             onView={(briefing) => setViewingBriefing(briefing)}
             onEdit={(briefing) => {
               setEditingBriefing(briefing)
-              setView('form')
+              setCurrentView('form')
             }}
             onDelete={(briefing) => setDeletingBriefing(briefing)}
-            onDuplicate={(briefing) => {
+            onDuplicate={async (briefing) => {
               const duplicate = {
                 ...briefing,
                 id: `briefing-${Date.now()}`,
@@ -157,14 +149,14 @@ const AgentBriefing = () => {
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString()
               }
-              setBriefings(prev => [...prev, duplicate])
+              await createBriefing(duplicate)
             }}
             onCreateNew={() => {
               setEditingBriefing(null)
-              setView('form')
+              setCurrentView('form')
             }}
           />
-        ) : view === 'form' ? (
+        ) : currentView === 'form' ? (
           <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-8`}>
             <div className="mb-6">
               <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -179,18 +171,23 @@ const AgentBriefing = () => {
               initialData={editingBriefing}
               onCancel={() => {
                 setEditingBriefing(null)
-                setView(briefings.length > 0 ? 'list' : 'welcome')
+                setCurrentView(briefings.length > 0 ? 'list' : 'welcome')
               }}
-              onSave={(briefing) => {
-                if (editingBriefing) {
-                  // Update existing
-                  setBriefings(prev => prev.map(b => b.id === briefing.id ? briefing : b))
-                } else {
-                  // Add new
-                  setBriefings(prev => [...prev, briefing])
+              onSave={async (briefing) => {
+                try {
+                  if (editingBriefing) {
+                    // Update existing
+                    await updateBriefing(briefing.id, briefing)
+                  } else {
+                    // Add new
+                    await createBriefing(briefing)
+                  }
+                  setEditingBriefing(null)
+                  setCurrentView('list')
+                } catch (err) {
+                  console.error('Error saving briefing:', err)
+                  alert('Failed to save briefing. Please try again.')
                 }
-                setEditingBriefing(null)
-                setView('list')
               }}
             />
           </div>
@@ -205,7 +202,7 @@ const AgentBriefing = () => {
           onEdit={(briefing) => {
             setEditingBriefing(briefing)
             setViewingBriefing(null)
-            setView('form')
+            setCurrentView('form')
           }}
         />
       )}
@@ -231,11 +228,16 @@ const AgentBriefing = () => {
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  setBriefings(prev => prev.filter(b => b.id !== deletingBriefing.id))
-                  setDeletingBriefing(null)
-                  if (briefings.length === 1) {
-                    setView('welcome')
+                onClick={async () => {
+                  try {
+                    await deleteBriefingAPI(deletingBriefing.id)
+                    setDeletingBriefing(null)
+                    if (briefings.length === 1) {
+                      setCurrentView('welcome')
+                    }
+                  } catch (err) {
+                    console.error('Error deleting briefing:', err)
+                    alert('Failed to delete briefing. Please try again.')
                   }
                 }}
                 className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"

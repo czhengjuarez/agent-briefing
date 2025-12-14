@@ -15,6 +15,11 @@ binding = "BRIEFING_FILES"
 bucket_name = "agent-briefing-files"
 preview_bucket_name = "agent-briefing-files-preview"
 
+[[d1_databases]]
+binding = "DB"
+database_name = "agent-briefing-db"
+database_id = "e3d01033-08e3-4255-a680-283726e3aa7b"
+
 [ai]
 binding = "AI"
 
