@@ -1,5 +1,10 @@
--- Agent Briefing Tool Database Schema
--- Cloudflare D1 (SQLite)
+-- Drop existing tables
+DROP TABLE IF EXISTS sessions;
+DROP TABLE IF EXISTS files;
+DROP TABLE IF EXISTS briefings;
+DROP TABLE IF EXISTS users;
+
+-- Recreate tables without foreign key constraints for now
 
 -- Users table (for future authentication)
 CREATE TABLE IF NOT EXISTS users (
@@ -10,10 +15,10 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- Briefings table
+-- Briefings table (without FK constraint)
 CREATE TABLE IF NOT EXISTS briefings (
     id TEXT PRIMARY KEY,
-    user_id TEXT DEFAULT 'anonymous', -- Will be linked to users.id after auth
+    user_id TEXT DEFAULT 'anonymous',
     title TEXT NOT NULL,
     objective TEXT NOT NULL,
     context TEXT NOT NULL,
@@ -23,8 +28,6 @@ CREATE TABLE IF NOT EXISTS briefings (
     success_criteria TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    -- Foreign key will be added after authentication is implemented
-    -- FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 -- Files table (metadata for R2 storage)
@@ -34,8 +37,8 @@ CREATE TABLE IF NOT EXISTS files (
     filename TEXT NOT NULL,
     file_type TEXT,
     file_size INTEGER,
-    r2_key TEXT NOT NULL, -- Key in R2 bucket
-    preview TEXT, -- Short preview of content
+    r2_key TEXT NOT NULL,
+    preview TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (briefing_id) REFERENCES briefings(id) ON DELETE CASCADE
 );
@@ -51,8 +54,7 @@ CREATE TABLE IF NOT EXISTS sessions (
     user_id TEXT NOT NULL,
     token TEXT UNIQUE NOT NULL,
     expires_at DATETIME NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token);
