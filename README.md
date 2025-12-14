@@ -62,11 +62,30 @@ When delegating tasks to AI agents, humans often provide **vague, incomplete ins
 
 ## 💡 The Solution
 
-**Agent Briefing Tool** provides a **structured framework** for clear delegation:
+**Agent Briefing Tool** builds on Jason Cyr's original agent briefing concept with two key innovations:
 
-1. **AI-Guided Objective Refinement**: Transforms "Write a blog" into "Write a 1500-word technical blog post for software developers about Cloudflare Workers, with code examples and a call-to-action to try the free tier"
+### 1. Smart "Objective" Composer (Goal Refiner)
 
-2. **Rich Context Integration**: Upload documents, code files, and reports to provide comprehensive background
+Instead of a blank box, we offer an **AI-powered Goal Refiner**. When a user types "Write a blog," the app prompts:
+- "Who is the audience?"
+- "What is the tone?"
+- "What is the call to action?"
+
+This transforms vague objectives into clear, actionable instructions: *"Write a 1500-word technical blog post for software developers about Cloudflare Workers, with code examples and a call-to-action to try the free tier"*
+
+### 2. Context Integration (RAG)
+
+For the Context section, users can **upload files** (PDFs, DOCX, code files, previous reports). The app:
+- **Extracts text** from PDFs using PDF.js
+- **Parses DOCX** files using Mammoth.js
+- **Summarizes content** using Cloudflare AI
+- **"Zips" this context** into the briefing so the agent has the necessary history
+
+This solves the fundamental problem: **AI agents aren't mind readers**. By providing structured context and refined objectives, we enable effective agent orchestration.
+
+---
+
+**The result**: A **structured framework** for clear delegation that bridges the gap between human intent and AI execution.
 
 3. **Clear Boundaries & Escalation**: Define what the agent can/cannot do and when to escalate
 
