@@ -1,0 +1,28 @@
+name = "agent-briefing-api"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+[vars]
+ENVIRONMENT = "production"
+
+[[kv_namespaces]]
+binding = "AGENT_BRIEFING_KV"
+id = "YOUR_KV_NAMESPACE_ID"
+preview_id = "YOUR_PREVIEW_KV_NAMESPACE_ID"
+
+[[r2_buckets]]
+binding = "BRIEFING_FILES"
+bucket_name = "agent-briefing-files"
+preview_bucket_name = "agent-briefing-files-preview"
+
+[ai]
+binding = "AI"
+
+[build]
+command = ""
+
+[env.production.vars]
+ENVIRONMENT = "production"
+
+[env.staging.vars]
+ENVIRONMENT = "staging"
