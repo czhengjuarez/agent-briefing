@@ -239,7 +239,7 @@ const ContextUploader = ({ files, onFilesChange, onFilesProcessed }) => {
             )}
           </p>
           <p className={`mt-1 text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
-            PDF, DOC, TXT, MD, CSV, Code files (max 10MB each, {MAX_FILES} files total)
+            TXT, MD, CSV, Code files get full content extraction. PDF/DOC show file info. (max 10MB each, {MAX_FILES} files total)
           </p>
         </div>
       </div>

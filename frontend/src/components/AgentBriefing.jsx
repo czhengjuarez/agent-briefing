@@ -153,6 +153,7 @@ const AgentBriefing = () => {
             }}
             onCreateNew={() => {
               setEditingBriefing(null)
+              localStorage.removeItem('briefingDraft') // Clear any existing draft
               setCurrentView('form')
             }}
           />
@@ -232,6 +233,8 @@ const AgentBriefing = () => {
                   try {
                     await deleteBriefingAPI(deletingBriefing.id)
                     setDeletingBriefing(null)
+                    // Clear any draft that might be saved
+                    localStorage.removeItem('briefingDraft')
                     if (briefings.length === 1) {
                       setCurrentView('welcome')
                     }
