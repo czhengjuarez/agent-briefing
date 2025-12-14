@@ -431,16 +431,8 @@ async function handleFiles(request, env, path, method, corsHeaders) {
       const fileId = `file-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       const r2Key = `${briefingId || 'temp'}/${fileId}`;
       
-      // Upload to R2
-      await r2.put(r2Key, file.stream(), {
-        httpMetadata: {
-          contentType: file.type,
-        },
-        customMetadata: {
-          originalName: file.name,
-          uploadedAt: new Date().toISOString()
-        }
-      });
+      // Read file content first (before streaming to R2)
+      const arrayBuffer = await file.arrayBuffer();
       
       // Extract text content for summarization
       let preview = `File: ${file.name}`;
@@ -448,13 +440,18 @@ async function handleFiles(request, env, path, method, corsHeaders) {
       
       if (summarize) {
         try {
-          const arrayBuffer = await file.arrayBuffer();
           const text = await extractTextFromFile(arrayBuffer, file.type, file.name);
           
-          if (text && text.length > 100) {
-            // Use AI to summarize
-            summary = await summarizeWithAI(env.AI, text, file.name);
-            preview = summary.substring(0, 500);
+          if (text && !text.startsWith('Binary file:')) {
+            // For short text, use as-is; for longer text, summarize with AI
+            if (text.length > 1000) {
+              summary = await summarizeWithAI(env.AI, text, file.name);
+              preview = summary || text.substring(0, 500);
+            } else {
+              // Short enough to use directly
+              preview = text;
+              summary = text;
+            }
           } else {
             preview = text || `Binary file: ${file.name}`;
           }
@@ -463,6 +460,17 @@ async function handleFiles(request, env, path, method, corsHeaders) {
           preview = `File uploaded: ${file.name}`;
         }
       }
+      
+      // Upload to R2 (using arrayBuffer since stream was consumed)
+      await r2.put(r2Key, arrayBuffer, {
+        httpMetadata: {
+          contentType: file.type,
+        },
+        customMetadata: {
+          originalName: file.name,
+          uploadedAt: new Date().toISOString()
+        }
+      });
       
       return new Response(JSON.stringify({
         success: true,
