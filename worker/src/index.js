@@ -80,7 +80,23 @@ async function handleBriefings(request, env, path, method, corsHeaders) {
         'SELECT * FROM briefings ORDER BY created_at DESC'
       ).all();
       
-      return new Response(JSON.stringify({ briefings: results }), {
+      // Transform snake_case to camelCase for frontend
+      const briefings = results.map(b => ({
+        id: b.id,
+        userId: b.user_id,
+        title: b.title,
+        objective: b.objective,
+        context: b.context,
+        boundaries: b.boundaries,
+        escalation: b.escalation,
+        stakeholders: b.stakeholders,
+        successCriteria: b.success_criteria,
+        createdAt: b.created_at,
+        updatedAt: b.updated_at,
+        contextFiles: [] // Will be populated when viewing individual briefing
+      }));
+      
+      return new Response(JSON.stringify({ briefings }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
@@ -89,11 +105,11 @@ async function handleBriefings(request, env, path, method, corsHeaders) {
     if (path.match(/^\/api\/briefings\/[^/]+$/) && method === 'GET') {
       const id = path.split('/').pop();
       
-      const briefing = await db.prepare(
+      const b = await db.prepare(
         'SELECT * FROM briefings WHERE id = ?'
       ).bind(id).first();
       
-      if (!briefing) {
+      if (!b) {
         return new Response(JSON.stringify({ error: 'Briefing not found' }), {
           status: 404,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -105,9 +121,30 @@ async function handleBriefings(request, env, path, method, corsHeaders) {
         'SELECT * FROM files WHERE briefing_id = ?'
       ).bind(id).all();
       
-      return new Response(JSON.stringify({ 
-        briefing: { ...briefing, contextFiles: files }
-      }), {
+      // Transform to camelCase
+      const briefing = {
+        id: b.id,
+        userId: b.user_id,
+        title: b.title,
+        objective: b.objective,
+        context: b.context,
+        boundaries: b.boundaries,
+        escalation: b.escalation,
+        stakeholders: b.stakeholders,
+        successCriteria: b.success_criteria,
+        createdAt: b.created_at,
+        updatedAt: b.updated_at,
+        contextFiles: files.map(f => ({
+          id: f.id,
+          name: f.filename,
+          type: f.file_type,
+          size: f.file_size,
+          preview: f.preview,
+          uploadedAt: f.created_at
+        }))
+      };
+      
+      return new Response(JSON.stringify({ briefing }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
