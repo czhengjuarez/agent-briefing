@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTheme } from '../contexts/ThemeContext'
 
+// AI-powered objective refinement component v1.1
 const ObjectiveComposer = ({ value, onChange, error }) => {
   const { isDarkMode } = useTheme()
   const [showAI, setShowAI] = useState(false)
