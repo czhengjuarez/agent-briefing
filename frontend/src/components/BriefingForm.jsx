@@ -19,6 +19,13 @@ const BriefingForm = ({ initialData, onCancel, onSave }) => {
   
   const [contextFiles, setContextFiles] = useState(initialData?.contextFiles || [])
   
+  // Update contextFiles when initialData changes (for edit mode)
+  useEffect(() => {
+    if (initialData?.contextFiles) {
+      setContextFiles(initialData.contextFiles)
+    }
+  }, [initialData])
+  
   const [errors, setErrors] = useState({})
   const [isDirty, setIsDirty] = useState(false)
   const [showUnsavedWarning, setShowUnsavedWarning] = useState(false)
