@@ -6,6 +6,25 @@
 [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-orange)](https://workers.cloudflare.com/)
 [![React](https://img.shields.io/badge/React-19-blue)](https://react.dev/)
 
+**Live App:** https://agent-briefing.coscient.workers.dev  
+**Backend API:** https://agent-briefing-api.coscient.workers.dev
+
+---
+
+## 📋 Table of Contents
+
+- [The Problem](#-the-problem)
+- [The Solution](#-the-solution)
+- [Features](#-features)
+- [Live Demo](#-live-demo)
+- [Architecture](#-architecture)
+- [Tech Stack](#-tech-stack)
+- [Installation](#-installation)
+- [Deployment](#-deployment)
+- [API Documentation](#-api-documentation)
+- [Project Structure](#-project-structure)
+- [Contributing](#-contributing)
+
 ---
 
 ## 🎯 The Problem
@@ -57,20 +76,24 @@ When delegating tasks to AI agents, humans often provide **vague, incomplete ins
   - Transforms ambiguity into clarity
 
 ### 📎 Context Integration
-- **File Upload System**
+- **Intelligent File Upload System**
   - Drag & drop interface
-  - Supports: PDF, DOC, TXT, MD, CSV, Code files
+  - **PDF Parsing**: Full text extraction using PDF.js
+  - **DOCX Parsing**: Full text extraction using Mammoth.js
+  - **Text Files**: TXT, MD, JSON, CSV, Code files
   - Max 5 files, 10MB each
-  - Automatic content extraction
-  - File content appended to context
+  - Automatic content extraction and AI summarization
+  - Files stored in Cloudflare R2
+  - Content automatically appended to context field
 
 ### 📋 Briefing Management
-- **Full CRUD Operations**
-  - Create new briefings
-  - Edit existing briefings
-  - Delete briefings
-  - Duplicate briefings
-  - View detailed briefings
+- **Full CRUD Operations with D1 Database**
+  - Create new briefings → Saved to Cloudflare D1
+  - Edit existing briefings → Updated in D1
+  - Delete briefings → Removed from D1 and R2
+  - Duplicate briefings → Creates new D1 entry
+  - View detailed briefings → Loaded from D1
+  - Multi-user ready (schema includes user authentication tables)
 
 ### 📤 Export & Share
 - **Copy to Clipboard**: One-click copy formatted briefing
@@ -87,11 +110,20 @@ When delegating tasks to AI agents, humans often provide **vague, incomplete ins
 - **Character Counters**: Track field lengths
 - **Responsive Design**: Works on desktop and mobile
 
-### 📁 File Management
-- **Supported Formats**: PDF, DOC, DOCX, TXT, MD, CSV, XLSX
-- **Max File Size**: 10MB per file
-- **Max Files**: 5 files per briefing
-- **Storage**: Cloudflare R2 for scalable object storage
+### 📁 File Processing & Storage
+- **Supported Formats**: 
+  - ✅ **PDF** - Full text extraction (PDF.js)
+  - ✅ **DOCX** - Full text extraction (Mammoth.js)
+  - ✅ **TXT, MD, JSON, CSV** - Direct content reading
+  - ✅ **Code files** - JS, PY, JAVA, HTML, CSS
+- **Processing**:
+  - Client-side extraction (PDF.js, Mammoth.js)
+  - Server-side AI summarization (>1000 chars)
+  - Automatic content integration
+- **Storage**:
+  - File metadata → Cloudflare D1
+  - File content → Cloudflare R2
+  - Max 10MB per file, 5 files per briefing
 
 ### 🎨 Design System
 - **Color Palette**: Matches PromptLibrary aesthetic
@@ -213,21 +245,92 @@ npm run build
 # Build script coming soon
 ```
 
-## 📊 API Endpoints
+## 📊 API Documentation
+
+### Base URL
+```
+https://agent-briefing-api.coscient.workers.dev
+```
+
+### Briefing Endpoints (D1 Database)
+
+#### List All Briefings
+```http
+GET /api/briefings
+```
+**Response**: Array of briefings with metadata
+
+#### Get Single Briefing
+```http
+GET /api/briefings/:id
+```
+**Response**: Briefing with associated files
+
+#### Create Briefing
+```http
+POST /api/briefings
+Content-Type: application/json
+
+{
+  "title": "Q4 Marketing Campaign",
+  "objective": "Create blog targeting developers...",
+  "context": "Company background...",
+  "boundaries": "Don't mention competitors",
+  "escalation": "Contact @manager for budget",
+  "stakeholders": "Marketing, Engineering",
+  "successCriteria": "10K views, 100 signups"
+}
+```
+
+#### Update Briefing
+```http
+PUT /api/briefings/:id
+Content-Type: application/json
+```
+
+#### Delete Briefing
+```http
+DELETE /api/briefings/:id
+```
+
+### File Upload Endpoints (R2 Storage)
+
+#### Upload File
+```http
+POST /api/files/upload
+Content-Type: multipart/form-data
+
+file: [binary]
+briefingId: "briefing-123"
+summarize: "true"
+```
+**Response**: File metadata with extracted text/summary
+
+#### Download File
+```http
+GET /api/files/:id
+```
+
+### AI Endpoints
+
+#### Refine Objective
+```http
+POST /api/ai/refine-objective
+Content-Type: application/json
+
+{
+  "objective": "Write a blog",
+  "answers": ["Developers", "Technical", "Try our product"]
+}
+```
+**Response**: Clarifying questions or refined objective
 
 ### Health Check
-- `GET /api/health` - Check API status and service availability
+```http
+GET /api/health
+```
 
-### AI Features (Live)
-- `POST /api/ai/refine-objective` - Smart objective composer
-  - **Input**: `{ "objective": "Write a blog" }`
-  - **Output**: `{ "questions": [...] }` or `{ "refined": "..." }`
-
-### Future Endpoints
-- `GET /api/briefings` - List all briefings (KV storage)
-- `POST /api/briefings` - Create briefing (KV storage)
-- `POST /api/files/upload` - Upload file (R2 storage)
-- `POST /api/ai/summarize-file` - Summarize uploaded file
+For detailed API documentation, see [`worker/README.md`](./worker/README.md)
 
 ---
 
@@ -273,28 +376,79 @@ npm run build
 |-----------|---------|---------|
 | React | 19 | UI framework |
 | Vite | 7.2.7 | Build tool & dev server |
-| Tailwind CSS | 3.4.17 | Styling |
-| React Dropzone | - | File uploads |
+| Tailwind CSS | 3.4.17 | Styling & theming |
+| Mammoth.js | 1.8.0 | DOCX text extraction |
+| PDF.js | 4.10.38 | PDF text extraction |
 
-### Backend
+### Backend (Cloudflare Workers)
 | Technology | Purpose |
 |-----------|---------|
-| Cloudflare Workers | Serverless compute |
-| Cloudflare AI | Llama 3.1 8B model |
-| Cloudflare KV | Key-value storage |
-| Cloudflare R2 | Object storage |
-| Workers Sites | Static asset serving |
+| Cloudflare Workers | Serverless compute platform |
+| Cloudflare D1 | SQLite database for briefings |
+| Cloudflare R2 | Object storage for files |
+| Cloudflare AI | Llama 3.1 8B for objective refinement |
+| Workers Sites | Static asset serving from KV |
 
-### Development
+### Database Schema (D1)
+| Table | Purpose |
+|-------|---------|
+| `users` | User authentication (future) |
+| `briefings` | Briefing data storage |
+| `files` | File metadata & R2 keys |
+| `sessions` | User sessions (future) |
+
+### Development Tools
 | Tool | Purpose |
 |------|---------|
-| Wrangler | Cloudflare CLI |
+| Wrangler CLI | Cloudflare deployment |
 | ESLint | Code linting |
 | Git | Version control |
+| npm | Package management |
 
 ---
 
-## � Cost Estimate
+## 📁 Project Structure
+
+```
+AgentBriefing/
+├── frontend/                    # React application
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── AgentBriefing.jsx      # Main app component
+│   │   │   ├── BriefingForm.jsx       # Briefing creation form
+│   │   │   ├── BriefingList.jsx       # Briefing list view
+│   │   │   ├── BriefingDetailsModal.jsx # View/export modal
+│   │   │   ├── ObjectiveComposer.jsx  # AI refinement UI
+│   │   │   └── ContextUploader.jsx    # File upload with parsing
+│   │   ├── contexts/
+│   │   │   └── ThemeContext.jsx       # Dark mode state
+│   │   ├── hooks/
+│   │   │   └── useBriefings.js        # API integration hook
+│   │   └── App.jsx
+│   ├── public/
+│   │   ├── favicon.svg
+│   │   └── pdf.worker.min.mjs         # PDF.js worker
+│   ├── wrangler.toml                  # Frontend worker config
+│   └── package.json
+│
+├── worker/                      # Cloudflare Worker API
+│   ├── src/
+│   │   └── index.js                   # API routes & handlers
+│   ├── migrations/
+│   │   └── 001_remove_fk_constraint.sql
+│   ├── schema.sql                     # D1 database schema
+│   ├── wrangler.toml                  # Backend worker config
+│   └── README.md                      # API documentation
+│
+├── README.md                    # This file
+├── DEPLOYMENT_COMPLETE.md       # Deployment guide
+├── FILE_UPLOAD_FEATURE.md       # File upload docs
+└── PROJECT_SUMMARY.md           # Project overview
+```
+
+---
+
+## 💰 Cost Estimate
 
 ### Cloudflare Workers Paid Plan: $5/month
 **Includes:**
