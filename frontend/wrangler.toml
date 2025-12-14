@@ -1,0 +1,10 @@
+name = "agent-briefing-frontend"
+main = "workers-site/index.js"
+compatibility_date = "2024-01-01"
+
+# Workers Sites configuration
+[site]
+bucket = "./dist"
+
+[vars]
+API_URL = "https://agent-briefing-api.coscient.workers.dev"
