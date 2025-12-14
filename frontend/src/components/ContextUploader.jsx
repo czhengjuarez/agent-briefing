@@ -1,6 +1,10 @@
 import { useState } from 'react'
 import { useTheme } from '../contexts/ThemeContext'
 import mammoth from 'mammoth'
+import * as pdfjsLib from 'pdfjs-dist'
+
+// Configure PDF.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
 
 const ContextUploader = ({ files, onFilesChange, onFilesProcessed }) => {
   const { isDarkMode } = useTheme()
@@ -75,12 +79,35 @@ const ContextUploader = ({ files, onFilesChange, onFilesProcessed }) => {
         }
       }
       
+      // For PDF files, extract text using PDF.js
+      if (file.name.endsWith('.pdf') || file.type === 'application/pdf') {
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+          const textParts = [];
+          
+          // Extract text from each page
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items.map(item => item.str).join(' ');
+            textParts.push(pageText);
+          }
+          
+          extractedText = textParts.join('\n\n');
+          console.log('Extracted PDF text:', extractedText.substring(0, 200));
+        } catch (err) {
+          console.error('PDF extraction error:', err);
+        }
+      }
+      
       // If we extracted text client-side, create a text file to upload
       let fileToUpload = file;
       if (extractedText) {
         // Create a new text file with the extracted content
         const textBlob = new Blob([extractedText], { type: 'text/plain' });
-        fileToUpload = new File([textBlob], file.name.replace('.docx', '.txt'), { type: 'text/plain' });
+        const textFileName = file.name.replace(/\.(docx|pdf)$/i, '.txt');
+        fileToUpload = new File([textBlob], textFileName, { type: 'text/plain' });
       }
       
       // Upload file to server for processing
@@ -261,7 +288,7 @@ const ContextUploader = ({ files, onFilesChange, onFilesProcessed }) => {
             )}
           </p>
           <p className={`mt-1 text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
-            TXT, MD, CSV, Code files get full content extraction. PDF/DOC show file info. (max 10MB each, {MAX_FILES} files total)
+            Full text extraction: PDF, DOCX, TXT, MD, CSV, Code files. (max 10MB each, {MAX_FILES} files total)
           </p>
         </div>
       </div>
