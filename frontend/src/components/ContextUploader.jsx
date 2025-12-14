@@ -3,8 +3,8 @@ import { useTheme } from '../contexts/ThemeContext'
 import mammoth from 'mammoth'
 import * as pdfjsLib from 'pdfjs-dist'
 
-// Configure PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
+// Configure PDF.js worker - use unpkg for reliability
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`
 
 const ContextUploader = ({ files, onFilesChange, onFilesProcessed }) => {
   const { isDarkMode } = useTheme()
@@ -82,8 +82,14 @@ const ContextUploader = ({ files, onFilesChange, onFilesProcessed }) => {
       // For PDF files, extract text using PDF.js
       if (file.name.endsWith('.pdf') || file.type === 'application/pdf') {
         try {
+          console.log('Starting PDF extraction for:', file.name);
           const arrayBuffer = await file.arrayBuffer();
-          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+          console.log('PDF arrayBuffer size:', arrayBuffer.byteLength);
+          
+          const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+          const pdf = await loadingTask.promise;
+          console.log('PDF loaded, pages:', pdf.numPages);
+          
           const textParts = [];
           
           // Extract text from each page
@@ -92,12 +98,15 @@ const ContextUploader = ({ files, onFilesChange, onFilesProcessed }) => {
             const textContent = await page.getTextContent();
             const pageText = textContent.items.map(item => item.str).join(' ');
             textParts.push(pageText);
+            console.log(`Page ${i} text length:`, pageText.length);
           }
           
           extractedText = textParts.join('\n\n');
-          console.log('Extracted PDF text:', extractedText.substring(0, 200));
+          console.log('✅ PDF extraction successful! Total text length:', extractedText.length);
+          console.log('First 200 chars:', extractedText.substring(0, 200));
         } catch (err) {
-          console.error('PDF extraction error:', err);
+          console.error('❌ PDF extraction error:', err);
+          console.error('Error details:', err.message, err.stack);
         }
       }
       
