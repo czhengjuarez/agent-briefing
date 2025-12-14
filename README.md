@@ -2,7 +2,7 @@
 
 > **AI-powered delegation framework that transforms vague instructions into clear, actionable agent briefings.**
 
-[![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://agent-briefing-frontend.coscient.workers.dev)
+[![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://agent-briefing.coscient.workers.dev)
 [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-orange)](https://workers.cloudflare.com/)
 [![React](https://img.shields.io/badge/React-19-blue)](https://react.dev/)
 
@@ -104,7 +104,7 @@ When delegating tasks to AI agents, humans often provide **vague, incomplete ins
 
 ## 🚀 Live Demo
 
-**Frontend**: https://agent-briefing-frontend.coscient.workers.dev  
+**Frontend**: https://agent-briefing.coscient.workers.dev  
 **Backend API**: https://agent-briefing-api.coscient.workers.dev
 
 ### Try It Now:
@@ -323,7 +323,7 @@ Contributions welcome! Please read CONTRIBUTING.md for guidelines.
 ## � Contact
 
 - **GitHub**: [czhengjuarez/agent-briefing](https://github.com/czhengjuarez/agent-briefing)
-- **Live Demo**: https://agent-briefing-frontend.coscient.workers.dev
+- **Live Demo**: https://agent-briefing.coscient.workers.dev
 
 ---
 

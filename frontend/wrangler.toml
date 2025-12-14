@@ -1,4 +1,4 @@
-name = "agent-briefing-frontend"
+name = "agent-briefing"
 main = "workers-site/index.js"
 compatibility_date = "2024-01-01"
 
